@@ -6,9 +6,9 @@ import re
 
 ## URL (without https)
 
-url = 'www.forestgroveaerials.com'
+url = 'www.formularookies.com'
 # get your key here https://www.bing.com/indexnow/getstarted#implementation
-key = 'f554797df2e94d8bb4230dbdf598aad7'
+key = 'a2e79b4e18904bb3bf5e0efd94f89d75'
 
 def download_and_save_sitemap(url):
     """
@@ -60,17 +60,60 @@ def write_urls():
             for url in url_elements:
                 file.write(url + '\n')
 
+def create_postman_file():
+    """
+    This function creates a postman.txt file containing the IndexNow API request format.
+    It uses the URL and key from the configuration, and includes all URLs from data/urls.txt.
+
+    :param None: This function does not require any input parameters.
+    :return: A string indicating success or failure of the operation.
+    """
+    try:
+        # Read URLs from urls.txt
+        with open('data/urls.txt', 'r') as file:
+            urlList = [line.strip() for line in file if line.strip()]
+        
+        # Format the URL list with proper indentation and quotes
+        formatted_urls = ',\n      '.join([f'"{url}"' for url in urlList])
+        
+        # Create the postman.txt content
+        postman_content = f"""POST /IndexNow HTTP/1.1
+Content-Type: application/json; charset=utf-8
+Host: api.indexnow.org
+{{
+  "host": "{url}",
+  "key": "{key}",
+  "keyLocation": "https://{url}/{key}.txt",
+  "urlList": [
+      {formatted_urls}
+      ]
+}}"""
+        
+        # Write to postman.txt
+        with open('postman.txt', 'w') as file:
+            file.write(postman_content)
+        
+        return "postman.txt created successfully."
+    except Exception as e:
+        return f"Error creating postman.txt: {str(e)}"
+
 def submit_payload(payload, headers, sitename, siteurl):
-  
+
+    #print("Payload: " + payload)
+    #print("Headers: " + headers)
+    #print("Site name: " + sitename)
+    #print("URL : " + siteurl)
+
+
   conn = http.client.HTTPSConnection(siteurl)
-  conn.request("POST", "/indexnow", payload, headers)
+  conn.request("POST", "/IndexNow", payload, headers)
   res = conn.getresponse()
   data = res.read()
-    
+
   if res.status == 200 or res.status == 202:
     print(sitename +" submission successful.")
   else:
-    print(sitename + " submission failed.") 
+    print(sitename + " submission failed.")
     print(f"Status code: {res.status}")
     print(data.decode("utf-8"))
   conn.close()
@@ -94,27 +137,41 @@ def main():
       # Write the URLs to a text file
       write_urls()
 
+      # Create the postman.txt file
+      print(create_postman_file())
+
       # read from urls.txt and parse line by line
       with open('data/urls.txt', 'r') as file:
-          urlList = [line.strip() for line in file]
+        urlList = [line.strip() for line in file]
+        print("Submitting: " + url)
+        payload = json.dumps({
+            "host": url,
+            "key": key,
+            "keyLocation": "https://" + url + "/" + key + ".txt",
+            "urlList": urlList
+        })
+        headers = {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
 
-      payload = json.dumps({
-          "host": url,
-          "key": key,
-          "keyLocation": "https://" + url + "/" + key + ".txt",
-          "urlList": urlList
-      })
-      headers = {
-          'Content-Type': 'application/json'
-      }
+        print("Submitting: https://" + url)
+        #submit_payload(payload, headers, "seznam", "search.seznam.cz")
+        #submit_payload(payload, headers, "IndexNow", "api.indexnow.org")
+        #submit_payload(payload, headers, "Bing", "www.bing.com")
+        #submit_payload(payload, headers, "Yandex", "yandex.com")
+        #submit_payload(payload, headers, "Amazon", "indexnow.amazonbot.amazon")
+        #submit_payload(payload, headers, "Naver", "searchadvisor.naver.com")
+        #submit_payload(payload, headers, "Yep", "indexnow.yep.com")
 
-      print("Submitting: Https://" + url)
-      submit_payload(payload, headers, "seznam", "search.seznam.cz")
-      submit_payload(payload, headers, "IndexNow", "api.indexnow.org")
-      submit_payload(payload, headers, "Bing", "www.bing.com")
-      submit_payload(payload, headers, "Yandex", "yandex.com")
-      submit_payload(payload, headers, "Naver", "searchadvisor.naver.com")
-      submit_payload(payload, headers, "Yep", "indexnow.yep.com")
+
+        #IndexNow hub	https://api.indexnow.org/indexnow
+        #Bing	https://www.bing.com/indexnow
+        #Yandex	https://yandex.com/indexnow
+        #Naver	https://searchadvisor.naver.com/indexnow
+        ##Seznam.cz	https://search.seznam.cz/indexnow
+        #Yep	https://indexnow.yep.com/indexnow
+
+
     except Exception as e:
         print("Error! " + str(e))
 
